@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="manifest.json">
+<title>KUET Attendance Tracker</title>
+<style>
+:root{--bg:#0b1220;--panel:#111a2b;--panel2:#172238;--text:#eef4ff;--muted:#9aa8bf;--line:#27344b;--accent:#67e8f9;--good:#34d399;--warn:#fbbf24;--bad:#fb7185}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(145deg,#08101d,#0f172a 55%,#101827);color:var(--text);min-height:100vh}
+button,input,select{font:inherit}button{cursor:pointer;border:0}.app{max-width:1100px;margin:auto;padding:18px 16px 100px}
+header{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}.brand h1{margin:0;font-size:25px}.brand p{margin:5px 0;color:var(--muted);font-size:13px}
+nav{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}.navbtn{background:var(--panel);color:var(--muted);padding:10px 14px;border:1px solid var(--line);border-radius:12px}.navbtn.active{color:#07131c;background:var(--accent);font-weight:700}
+.view{display:none}.view.active{display:block}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:rgba(17,26,43,.9);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 12px 35px rgba(0,0,0,.16)}.metric{font-size:30px;font-weight:800;margin:4px 0}.muted{color:var(--muted)}.small{font-size:12px}.course-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}.course-card{position:relative}.course-top{display:flex;justify-content:space-between;gap:10px}.course-code{font-weight:800}.course-name{font-size:13px;color:var(--muted);margin-top:3px}.pct{font-size:28px;font-weight:800}.bar{height:8px;background:#25324a;border-radius:99px;overflow:hidden;margin:13px 0}.bar i{display:block;height:100%;border-radius:99px}.good{background:var(--good)}.warn{background:var(--warn)}.bad{background:var(--bad)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{padding:9px 12px;border-radius:10px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}.btn.primary{background:var(--accent);color:#06121a;font-weight:700}.btn.goodbtn{background:#123c33;color:#9ff5d2;border:1px solid #17604e}.btn.badbtn{background:#431d29;color:#fecdd3;border:1px solid #713047}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:11px 8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:600}
+.notice{padding:12px 14px;border-radius:13px;background:#142033;border:1px solid var(--line);color:#cbd7ea;margin-bottom:14px}.notice strong{color:var(--text)}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}input,select{width:100%;padding:10px 11px;border-radius:10px;border:1px solid var(--line);background:#0b1424;color:var(--text);outline:none}.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.settings-row{display:flex;align-items:end;gap:10px}.empty{padding:35px;text-align:center;color:var(--muted)}
+.tag{display:inline-block;font-size:11px;padding:4px 7px;border-radius:999px;background:#1c2940;color:#b9c9e3}.safe{color:var(--good)}.danger{color:var(--bad)}.warning{color:var(--warn)}
+footer{position:fixed;bottom:0;left:0;right:0;background:rgba(8,14,25,.9);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px;text-align:center;color:var(--muted);font-size:11px}
+@media(max-width:760px){.grid{grid-template-columns:1fr 1fr}.course-grid{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}header{align-items:flex-start}.brand h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="brand"><h1>KUET Attendance Tracker</h1><p>CSE 2nd Year 2nd Term · Section B · Theory only</p></div><span class="tag">60% minimum</span></header>
+<nav>
+<button class="navbtn active" data-view="dashboard">Dashboard</button>
+<button class="navbtn" data-view="schedule">Schedule</button>
+<button class="navbtn" data-view="courses">Courses</button>
+<button class="navbtn" data-view="history">History</button>
+<button class="navbtn" data-view="settings">Settings</button>
+</nav>
+
+<section id="dashboard" class="view active">
+<div class="notice"><strong>How it works:</strong> record each theory class as attended or missed. Attendance = attended ÷ held classes. The app treats 60% as the eligibility threshold and shows a buffer so you can see how many future classes you can miss or need to attend.</div>
+<div id="metrics" class="grid"></div>
+<div id="courseCards" class="course-grid"></div>
+</section>
+
+<section id="schedule" class="view">
+<div class="card"><h2>Section B weekly theory schedule</h2><p class="muted small">Labs are intentionally excluded.</p><div id="scheduleTable"></div></div>
+</section>
+
+<section id="courses" class="view">
+<div class="card"><h2>Courses & targets</h2><p class="muted small">Targets are based on the timetable pattern. If your department later changes the number of conducted classes, edit the target in Settings.</p><div id="courseTable"></div></div>
+</section>
+
+<section id="history" class="view">
+<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><h2 style="margin:0">Attendance history</h2><p class="muted small">Every record is stored on this device.</p></div><button class="btn" id="clearHistory">Clear all records</button></div><div id="historyTable" style="margin-top:12px"></div></div>
+</section>
+
+<section id="settings" class="view">
+<div class="card">
+<h2>Settings</h2>
+<div class="formgrid">
+<div><label>Minimum attendance %</label><input id="threshold" type="number" min="0" max="100" step="1"></div>
+<div><label>Semester duration (weeks)</label><input id="weeks" type="number" min="1" max="30" step="1"></div>
+</div>
+<div style="margin-top:18px"><h3>Course target classes</h3><div id="targetInputs"></div></div>
+<div class="actions"><button class="btn primary" id="saveSettings">Save settings</button><button class="btn" id="resetApp">Reset app</button></div>
+</div>
+</section>
+</div>
+<footer>Local-first PWA · No account · No external data required</footer>
+
+<script>
+const COURSES=[
+ {id:"CSE2209",name:"Theory of Computation",target:26,teachers:"DD / NS"},
+ {id:"CSE2201",name:"Algorithm Analysis and Design",target:39,teachers:"SH / MAN"},
+ {id:"ECE2213",name:"Digital Electronics",target:39,teachers:"FRH / FH"},
+ {id:"MATH2207",name:"Complex Variable, Vector Analysis and Statistics",target:39,teachers:"ARJ / HZ"},
+ {id:"HUM2207",name:"Economics and Accounting",target:39,teachers:"RA / FA"},
+ {id:"ECE2214",name:"Digital Electronics Laboratory (excluded from attendance)",target:26,teachers:"MRM / MIA",excluded:true}
+];
+
+const SCHEDULE=[
+["Sunday","08:50–09:40","CSE2209","DD"],["Sunday","09:40–10:30","MATH2207","ARJ"],
+["Sunday","10:40–11:30","HUM2207","RA/FA"],
+["Monday","08:00–08:50","CSE2201","SH/MAN"],["Monday","08:50–09:40","ECE2213","FRH/FH"],["Monday","09:40–10:30","MATH2207","HZ"],
+["Monday","10:40–01:10","CSE2202","Lab · excluded"],["Monday","02:30–05:00","ECE2214","Lab · excluded"],
+["Tuesday","08:00–08:50","CSE2209","NS"],["Tuesday","08:50–09:40","HUM2207","RA"],["Tuesday","09:40–10:30","ECE2213","FRH"],
+["Tuesday","10:40–12:20","CSE2208/CSE2202","Lab · excluded"],
+["Wednesday","08:00–10:30","ECE2214","Lab · excluded"],["Wednesday","10:40–11:30","MATH2207","ARJ/HZ"],["Wednesday","11:30–12:20","CSE2201","SH"],
+["Wednesday","02:30–05:00","CSE2200","Lab · excluded"],
+["Thursday","08:00–10:30","CSE2208/CSE2200","Lab · excluded"],["Thursday","10:40–11:30","HUM2207","FA"],["Thursday","11:30–12:20","ECE2213","FRH"],["Thursday","12:20–01:10","CSE2201","MAN"]
+];
+
+const THEORY=COURSES.filter(c=>!c.excluded);
+let state=JSON.parse(localStorage.getItem("kuetAttendance")||"null")||{
+ threshold:60,weeks:13,targets:Object.fromEntries(COURSES.map(c=>[c.id,c.target])),records:[]
+};
+
+function save(){localStorage.setItem("kuetAttendance",JSON.stringify(state))}
+function course(id){return COURSES.find(c=>c.id===id)}
+function stats(c){
+ const r=state.records.filter(x=>x.course===c.id);
+ const held=r.length, attended=r.filter(x=>x.status==="present").length, missed=held-attended;
+ const pct=held?attended/held*100:0;
+ const target=state.targets[c.id]??c.target;
+ const projectedMisses=Math.floor((attended-(state.threshold/100)*held)/(state.threshold/100));
+ const need=Math.max(0,Math.ceil((state.threshold/100*held-attended)/(1-state.threshold/100)));
+ return {held,attended,missed,pct,target,projectedMisses,need};
+}
+function status(p){return p>=state.threshold?"safe":p>=state.threshold-5?"warning":"danger"}
+function renderDashboard(){
+ let all=THEORY.map(stats), held=all.reduce((a,x)=>a+x.held,0), att=all.reduce((a,x)=>a+x.attended,0), pct=held?att/held*100:0;
+ let below=all.filter(x=>x.pct<state.threshold).length;
+ document.getElementById("metrics").innerHTML=[
+  `<div class="card"><div class="muted small">Overall attendance</div><div class="metric ${status(pct)}">${pct.toFixed(1)}%</div><div class="muted small">${att} attended / ${held} held</div></div>`,
+  `<div class="card"><div class="muted small">Courses below threshold</div><div class="metric ${below?'danger':'safe'}">${below}</div><div class="muted small">${below?'Needs attention':'All tracked courses are at or above 60%'}</div></div>`,
+  `<div class="card"><div class="muted small">Semester target</div><div class="metric">${state.weeks} weeks</div><div class="muted small">${state.threshold}% minimum</div></div>`
+ ].join("");
+ document.getElementById("courseCards").innerHTML=THEORY.map(c=>{
+   let s=stats(c), st=status(s.pct), bar=Math.min(100,s.pct);
+   let advice=s.held===0?`No classes recorded yet · target ${s.target}`:
+     s.pct>=state.threshold?`You can miss about ${s.projectedMisses} more recorded class${s.projectedMisses===1?'':'es'} before reaching the threshold`:
+     `Attend the next ${s.need} consecutive class${s.need===1?'':'es'} to reach ${state.threshold}%`;
+   return `<div class="card course-card"><div class="course-top"><div><div class="course-code">${c.id}</div><div class="course-name">${c.name}</div></div><div class="pct ${st}">${s.pct.toFixed(1)}%</div></div>
+   <div class="bar"><i class="${st}" style="width:${bar}%"></i></div>
+   <div class="small muted">${s.attended} attended · ${s.missed} missed · ${s.held} held · target ${s.target}</div>
+   <div class="small" style="margin-top:9px">${advice}</div>
+   <div class="actions"><button class="btn goodbtn" onclick="record('${c.id}','present')">+ Attended</button><button class="btn badbtn" onclick="record('${c.id}','absent')">+ Missed</button></div></div>`
+ }).join("");
+}
+function renderSchedule(){
+ const rows=SCHEDULE.filter(r=>!r[2].includes("Lab"));
+ document.getElementById("scheduleTable").innerHTML=`<table><thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Teacher</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td><b>${r[2]}</b><br><span class="muted">${course(r[2])?.name||""}</span></td><td>${r[3]}</td></tr>`).join("")}</tbody></table>`;
+}
+function renderCourses(){
+ document.getElementById("courseTable").innerHTML=`<table><thead><tr><th>Course</th><th>Teachers</th><th>Target</th><th>Recorded</th></tr></thead><tbody>${THEORY.map(c=>{let s=stats(c);return `<tr><td><b>${c.id}</b><br><span class="muted">${c.name}</span></td><td>${c.teachers}</td><td>${s.target}</td><td>${s.held}</td></tr>`}).join("")}</tbody></table>`;
+}
+function renderHistory(){
+ let r=[...state.records].reverse();
+ document.getElementById("historyTable").innerHTML=r.length?`<table><thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead><tbody>${r.map(x=>`<tr><td>${x.date}</td><td>${x.course}</td><td class="${x.status==='present'?'safe':'danger'}">${x.status==='present'?'Attended':'Missed'}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No attendance records yet.</div>`;
+}
+function renderSettings(){
+ document.getElementById("threshold").value=state.threshold; document.getElementById("weeks").value=state.weeks;
+ document.getElementById("targetInputs").innerHTML=THEORY.map(c=>`<div class="settings-row" style="margin:10px 0"><div style="flex:1"><label>${c.id} — ${c.name}</label><input data-target="${c.id}" type="number" min="0" value="${state.targets[c.id]??c.target}"></div></div>`).join("");
+}
+function render(){renderDashboard();renderSchedule();renderCourses();renderHistory();renderSettings()}
+function record(id,status){
+ state.records.push({course:id,status,date:new Date().toISOString().slice(0,10)});
+ save();render();
+}
+document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>{document.querySelectorAll(".navbtn").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.view).classList.add("active")});
+document.getElementById("saveSettings").onclick=()=>{
+ state.threshold=Number(document.getElementById("threshold").value)||60; state.weeks=Number(document.getElementById("weeks").value)||13;
+ document.querySelectorAll("[data-target]").forEach(i=>state.targets[i.dataset.target]=Number(i.value)||0); save();render(); alert("Settings saved.");
+};
+document.getElementById("clearHistory").onclick=()=>{if(confirm("Clear every attendance record on this device?")){state.records=[];save();render()}};
+document.getElementById("resetApp").onclick=()=>{if(confirm("Reset all settings and attendance records?")){localStorage.removeItem("kuetAttendance");location.reload()}};
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+render();
+</script>
+</body>
+</html>

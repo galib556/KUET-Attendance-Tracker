@@ -1,0 +1,9 @@
+{
+  "name": "KUET Attendance Tracker",
+  "short_name": "KUET Attendance",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "description": "Local attendance and schedule tracker for KUET CSE Section B."
+}
